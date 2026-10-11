@@ -1,0 +1,5 @@
+keep_contact_id,merge_contact_id,email,duplicate_email,keep_activities,duplicate_activities
+C1150,C9002,hiro.ito@northanalytics.com,hiro.ito+sales@northanalytics.com,2,0
+C1169,C9004,ben.fischer@lumenfinance.com,ben.fischer+sales@lumenfinance.com,1,0
+C1179,C9003,vera.evans@nimbusenergy.com,Vera.Evans@nimbusenergy.com,3,0
+C1189,C9001,ava.khan@prairieworks.com,Ava.Khan@prairieworks.com,3,0

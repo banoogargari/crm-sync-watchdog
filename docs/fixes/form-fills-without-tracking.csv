@@ -1,0 +1,8 @@
+opportunity_id,amount,form_fill_date,landing_page,group,evidence,proposed_channel,abm_hint,needs_review
+O5205,36000,2026-09-23,/lp/demo,dropped_paid_click,gclid present,Paid Search,,yes
+O5230,30000,2026-08-31,/lp/abm,likely_abm,6 6sense ABA clicks in the 14 days before,,6sense,yes
+O5240,60000,2026-08-23,/lp/abm,likely_abm,3 6sense ABA clicks in the 14 days before,,6sense,yes
+O5245,36000,2026-08-28,/lp/abm,unknown,"no click ID, no search referrer, no ABA engagement",,,yes
+O5246,60000,2026-08-30,/lp/abm,likely_abm,6 linkedin_aba ABA clicks in the 14 days before,,LinkedIn,yes
+O5247,18000,2026-09-01,/lp/demo,dropped_paid_click,gclid present,Paid Search,,yes
+O5248,48000,2026-08-24,/lp/demo,dropped_paid_click,li_fat_id present,LinkedIn,,yes

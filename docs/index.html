@@ -1,0 +1,755 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CRM Sync Watchdog — Q3 2026</title>
+<style>
+  :root {
+    --bg: #f7f6f2; --card: #ffffff; --ink: #1d1d1b; --muted: #6b6a66; --line: #e4e2db;
+    --ok: #1f7a4d; --ok-bg: #e3f3ea; --bad: #a3460b; --bad-bg: #fcebdc; --rev: #5b4bb7; --rev-bg: #ece9fb;
+    --rep: #b8b5ab; --fix: #2f5fd0; --up: #1f7a4d; --down: #a3460b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #151514; --card: #1e1e1c; --ink: #ecebe6; --muted: #a09f99; --line: #34332f;
+      --ok: #6fd3a0; --ok-bg: #173526; --bad: #f2a56b; --bad-bg: #3a2414; --rev: #b3a8f5; --rev-bg: #2a2547;
+      --rep: #5d5b55; --fix: #7aa2ff; --up: #6fd3a0; --down: #f2a56b; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 40px 16px 64px; }
+  .eyebrow { color: var(--muted); font-size: 13px; letter-spacing: .06em; text-transform: uppercase; margin: 0 0 6px; }
+  h1 { font-size: clamp(26px, 4vw, 36px); line-height: 1.15; margin: 0 0 16px; letter-spacing: -.01em; }
+  .headline { font-size: 18px; margin: 0 0 28px; max-width: 72ch; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 8px; }
+  .stats.two { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); margin-top: 14px; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+  .stat b { display: block; font-size: 24px; font-variant-numeric: tabular-nums; }
+  .stat span { color: var(--muted); font-size: 13px; }
+  .stat.wide { grid-column: 1 / -1; border-color: var(--fix); }
+  .stat.wide b { font-size: 28px; margin: 2px 0; }
+  tr.ms th, tr.ms td { border-top: 2px solid var(--line); }
+  .sub { font-size: 12px; font-weight: 400; color: var(--muted); }
+  .stat .small { font-size: 14px; margin: 8px 0 0; } .stat .small b { display: inline; font-size: inherit; }
+  section { margin-top: 40px; }
+  h2 { font-size: 21px; margin: 0 0 12px; }
+  .table-wrap { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 600px; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  thead th { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+  tbody th { font-weight: 600; }
+  tr.warn th { color: var(--bad); }
+  tr.nonchan th { font-style: italic; }
+  tfoot th, tfoot td { border-bottom: 0; font-weight: 700; }
+  .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td.num:has(.track) { width: 22%; }
+  .delta.up { color: var(--up); } .delta.down { color: var(--down); }
+  .track { height: 4px; margin-top: 6px; background: var(--line); border-radius: 2px; overflow: hidden; }
+  .bar { display: block; height: 100%; border-radius: 2px; }
+  .b-rep { background: var(--rep); } .b-fix { background: var(--fix); }
+  .pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+  .pill.ok { color: var(--ok); background: var(--ok-bg); }
+  .pill.bad { color: var(--bad); background: var(--bad-bg); }
+  .pill.bad a { color: inherit; }
+  .pill.review { color: var(--rev); background: var(--rev-bg); }
+  .muted, .note { color: var(--muted); }
+  .note { font-size: 14px; margin-top: 10px; max-width: 80ch; }
+  .toggles { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-bottom: 12px; align-items: center; }
+  .switch > input { position: absolute; opacity: 0; pointer-events: none; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: var(--card); }
+  .seg label { padding: 5px 13px; font-size: 14px; cursor: pointer; color: var(--muted); }
+  #m-pipeline_created:checked ~ .toggles label[for="m-pipeline_created"], #m-closed_won_arr:checked ~ .toggles label[for="m-closed_won_arr"],
+  #s-all:checked ~ .toggles label[for="s-all"], #s-new_logo:checked ~ .toggles label[for="s-new_logo"], #s-expansion:checked ~ .toggles label[for="s-expansion"] { background: var(--ink); color: var(--card); }
+  input:focus-visible ~ .toggles .seg { outline: 2px solid var(--fix); outline-offset: 2px; }
+  .switch > .table-wrap table { display: none; }
+  #m-pipeline_created:checked ~ #s-all:checked ~ .table-wrap .t-pipeline_created.s-all,
+  #m-pipeline_created:checked ~ #s-new_logo:checked ~ .table-wrap .t-pipeline_created.s-new_logo,
+  #m-pipeline_created:checked ~ #s-expansion:checked ~ .table-wrap .t-pipeline_created.s-expansion,
+  #m-closed_won_arr:checked ~ #s-all:checked ~ .table-wrap .t-closed_won_arr.s-all,
+  #m-closed_won_arr:checked ~ #s-new_logo:checked ~ .table-wrap .t-closed_won_arr.s-new_logo,
+  #m-closed_won_arr:checked ~ #s-expansion:checked ~ .table-wrap .t-closed_won_arr.s-expansion { display: table; }
+  .moves { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+  .move { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+  .move h3 { margin: 0 0 6px; font-size: 16px; }
+  .move p { margin: 8px 0 0; font-size: 15px; }
+  .mline { font-size: 14px; font-variant-numeric: tabular-nums; margin-top: 4px; }
+  .mlabel { color: var(--muted); }
+  .chip { display: inline-block; font-size: 12px; font-weight: 600; border-radius: 6px; padding: 1px 6px; margin: 2px 2px 0 0; background: var(--bg); }
+  .chip.up { color: var(--up); } .chip.down { color: var(--down); } .chip a { color: inherit; }
+  details.opps { margin-top: 14px; } details.opps summary { cursor: pointer; font-weight: 600; margin-bottom: 10px; }
+  .issue { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; margin-bottom: 14px; scroll-margin-top: 16px; }
+  .issue header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .issue h3 { margin: 0; font-size: 17px; flex: 1 1 240px; }
+  .kind { margin: 0 0 4px; font-size: 12px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--bad); }
+  .why { font-size: 12px; margin-top: 4px; line-height: 1.5; } .why a { color: var(--bad); }
+  .howto { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; margin: 0 0 28px; font-size: 15px; }
+  .howto summary { cursor: pointer; font-weight: 600; }
+  .howto dl { margin: 10px 0 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; }
+  .howto dt { font-weight: 600; } .howto dd { margin: 0; color: var(--muted); }
+  @media (max-width: 560px) { .howto dl { grid-template-columns: 1fr; } .howto dd { margin-bottom: 6px; } }
+  .facts { display: flex; flex-wrap: wrap; gap: 28px; margin: 0 0 12px; }
+  .facts dt { font-size: 12px; color: var(--muted); }
+  .facts dd { margin: 0; font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .issue p { margin: 8px 0; }
+  .action { border-left: 3px solid var(--fix); padding-left: 12px; }
+  .clean { background: var(--ok-bg); color: var(--ok); padding: 14px 16px; border-radius: 12px; }
+  code { font: 13px ui-monospace, Menlo, monospace; }
+  footer { margin-top: 44px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); padding-top: 14px; }
+</style>
+</head>
+<body>
+<main>
+  <p class="eyebrow">CRM sync watchdog · test scenario &quot;everything&quot;</p>
+  <h1>Pipeline and ARR by channel, Q3 2026</h1>
+  <p class="headline">Marketing-sourced pipeline is $1,064,400 (51.1%) today and would be $1,418,400 (68%) if the proposed fixes are approved. Won ARR stays at $436,800 (63.4%) either way. Total pipeline ($2,084,400) and total won ARR ($688,800) don&#39;t change; the fixes only move money between channels. Don&#39;t trust the channel numbers yet for nine of ten channels (only Email is clean). The biggest causes are the Customer Summit missing in the CRM ($210,000 of pipeline on five deals) and the contact-sales form losing ad tracking since 2026-08-14. Influence data (for example LinkedIn ABA and 6sense ABA) shows interest, not cause, and is not added to the sourced numbers. Nothing has been changed in any system; every fix needs a person&#39;s approval.</p>
+
+  <details class="howto">
+    <summary>How to read this report</summary>
+    <dl>
+      <dt>Reported today</dt><dd>What the CRM shows right now: the number on today's dashboard.</dd>
+      <dt>If fixes are approved</dt><dd>What it would be once a person approves the proposed fixes. Nothing has been changed yet.</dd>
+      <dt>Trusted / Not trusted</dt><dd>Not trusted means at least one data problem moves money into or out of that channel; the problems are listed under it.</dd>
+      <dt>Sourced vs. influenced</dt><dd>Sourced: the channel of the last marketing touch before the deal was created (each deal counted once). Influenced: programs the account engaged with along the way (a deal can count for several).</dd>
+      <dt>Campaign missing in CRM</dt><dd>A program ran in the marketing tool but never reached the CRM, so its attendees&#39; activity is invisible to attribution.</dd>
+      <dt>Attendance not updated in CRM</dt><dd>The marketing tool shows people attended, but the CRM still says &quot;Registered&quot;, so the activity does not count.</dd>
+      <dt>Form lost ad tracking</dt><dd>Form fills arrive without their source (UTM), so the deal shows &quot;No source&quot; even when the person came from an ad.</dd>
+      <dt>Duplicate contacts</dt><dd>The same person exists twice; the deal sits on the copy with no marketing history.</dd>
+      <dt>Deal with no contact</dt><dd>Sales created the opportunity without a contact, so it cannot be traced to any marketing activity.</dd>
+      <dt>Deal amount ≠ billing</dt><dd>The won deal amount in the CRM differs from what billing actually charges (billing is correct).</dd>
+    </dl>
+  </details>
+
+  <div class="stats">
+    <div class="stat wide"><span>Marketing-sourced pipeline</span><b>$1,064,400 → $1,418,400</b><span>51% → 68% of all pipeline, reported today → if fixes are approved</span></div>
+    <div class="stat"><b>$2,084,400</b><span>Pipeline created (all)</span></div>
+    <div class="stat"><b>$688,800</b><span>Closed-won ARR (all)</span></div>
+    <div class="stat"><b>6</b><span>Problems found</span></div>
+    <div class="stat"><b>1 of 10</b><span>Channel rows trusted</span></div>
+    <div class="stat"><b>Passed</b><span>Automatic verification</span></div>
+  </div>
+
+  <section class="switch">
+    <h2>By channel: reported today vs. if fixes are approved</h2>
+    <input type="radio" name="m" id="m-pipeline_created" checked><input type="radio" name="m" id="m-closed_won_arr">
+    <input type="radio" name="s" id="s-all" checked><input type="radio" name="s" id="s-new_logo"><input type="radio" name="s" id="s-expansion">
+    <div class="toggles">
+      <span class="seg"><label for="m-pipeline_created">Pipeline created</label><label for="m-closed_won_arr">Closed-won ARR</label></span>
+      <span class="seg"><label for="s-all">All</label><label for="s-new_logo">New logo</label><label for="s-expansion">Expansion</label></span>
+    </div>
+    <div class="table-wrap">
+      <table class="t-pipeline_created s-all">
+        <thead><tr><th>Channel</th><th>Reported today</th><th>If fixes are approved</th><th>Change</th><th>Trust</th></tr></thead>
+        <tbody>
+        <tr class="warn">
+          <th scope="row">LinkedIn</th>
+          <td class="num">$391,200<div class="track"><span class="bar b-rep" style="width:53.4%"></span></div></td>
+          <td class="num">$415,200<div class="track"><span class="bar b-fix" style="width:56.7%"></span></div></td>
+          <td class="num delta up">+$24,000</td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a><br><a href="#C3">Form lost ad tracking</a><br><a href="#C6">Deal amount ≠ billing</a></div></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">Paid Search</th>
+          <td class="num">$279,600<div class="track"><span class="bar b-rep" style="width:38.2%"></span></div></td>
+          <td class="num">$357,600<div class="track"><span class="bar b-fix" style="width:48.9%"></span></div></td>
+          <td class="num delta up">+$78,000</td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C3">Form lost ad tracking</a><br><a href="#C4">Duplicate contacts</a></div></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">Events</th>
+          <td class="num">$12,000<div class="track"><span class="bar b-rep" style="width:1.6%"></span></div></td>
+          <td class="num">$246,000<div class="track"><span class="bar b-fix" style="width:33.6%"></span></div></td>
+          <td class="num delta up">+$234,000</td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a><br><a href="#C2">Attendance not updated in CRM</a></div></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">Organic</th>
+          <td class="num">$162,000<div class="track"><span class="bar b-rep" style="width:22.1%"></span></div></td>
+          <td class="num">$198,000<div class="track"><span class="bar b-fix" style="width:27.0%"></span></div></td>
+          <td class="num delta up">+$36,000</td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a><br><a href="#C4">Duplicate contacts</a></div></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">Content Syndication</th>
+          <td class="num">$84,000<div class="track"><span class="bar b-rep" style="width:11.5%"></span></div></td>
+          <td class="num">$96,000<div class="track"><span class="bar b-fix" style="width:13.1%"></span></div></td>
+          <td class="num delta up">+$12,000</td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a><br><a href="#C2">Attendance not updated in CRM</a><br><a href="#C4">Duplicate contacts</a></div></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">6sense</th>
+          <td class="num">$123,600<div class="track"><span class="bar b-rep" style="width:16.9%"></span></div></td>
+          <td class="num">$63,600<div class="track"><span class="bar b-fix" style="width:8.7%"></span></div></td>
+          <td class="num delta down">−$60,000</td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a></div></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">Webinars</th>
+          <td class="num">$6,000<div class="track"><span class="bar b-rep" style="width:0.8%"></span></div></td>
+          <td class="num">$36,000<div class="track"><span class="bar b-fix" style="width:4.9%"></span></div></td>
+          <td class="num delta up">+$30,000</td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C2">Attendance not updated in CRM</a></div></td>
+        </tr>
+        <tr class="">
+          <th scope="row">Email</th>
+          <td class="num">$6,000<div class="track"><span class="bar b-rep" style="width:0.8%"></span></div></td>
+          <td class="num">$6,000<div class="track"><span class="bar b-fix" style="width:0.8%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill ok">Trusted</span></td>
+        </tr>
+        <tr class="warn nonchan">
+          <th scope="row">No marketing activity</th>
+          <td class="num">$732,000<div class="track"><span class="bar b-rep" style="width:100.0%"></span></div></td>
+          <td class="num">$480,000<div class="track"><span class="bar b-fix" style="width:65.6%"></span></div></td>
+          <td class="num delta down">−$252,000</td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a><br><a href="#C2">Attendance not updated in CRM</a><br><a href="#C4">Duplicate contacts</a><br><a href="#C5">Deal with no contact</a><br><a href="#C6">Deal amount ≠ billing</a></div></td>
+        </tr>
+        <tr class="warn nonchan">
+          <th scope="row">No source</th>
+          <td class="num">$288,000<div class="track"><span class="bar b-rep" style="width:39.3%"></span></div></td>
+          <td class="num">$186,000<div class="track"><span class="bar b-fix" style="width:25.4%"></span></div></td>
+          <td class="num delta down">−$102,000</td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C3">Form lost ad tracking</a></div></td>
+        </tr>
+        </tbody>
+        <tfoot>
+          <tr class="ms"><th>Marketing-sourced<div class="sub">all channels except No source and No marketing activity</div></th><td class="num">$1,064,400 <span class="muted">(51%)</span></td><td class="num">$1,418,400 <span class="muted">(68%)</span></td><td class="num delta up">+$354,000</td><td></td></tr>
+          <tr><th>Total</th><td class="num">$2,084,400</td><td class="num">$2,084,400</td><td class="num muted">—</td><td></td></tr>
+        </tfoot>
+      </table>
+      <table class="t-pipeline_created s-new_logo">
+        <thead><tr><th>Channel</th><th>Reported today</th><th>If fixes are approved</th><th>Change</th><th>Trust</th></tr></thead>
+        <tbody>
+        <tr class="warn">
+          <th scope="row">LinkedIn</th>
+          <td class="num">$336,000<div class="track"><span class="bar b-rep" style="width:47.5%"></span></div></td>
+          <td class="num">$360,000<div class="track"><span class="bar b-fix" style="width:50.8%"></span></div></td>
+          <td class="num delta up">+$24,000</td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a><br><a href="#C3">Form lost ad tracking</a><br><a href="#C6">Deal amount ≠ billing</a></div></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">Paid Search</th>
+          <td class="num">$228,000<div class="track"><span class="bar b-rep" style="width:32.2%"></span></div></td>
+          <td class="num">$306,000<div class="track"><span class="bar b-fix" style="width:43.2%"></span></div></td>
+          <td class="num delta up">+$78,000</td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C3">Form lost ad tracking</a><br><a href="#C4">Duplicate contacts</a></div></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">Events</th>
+          <td class="num">$12,000<div class="track"><span class="bar b-rep" style="width:1.7%"></span></div></td>
+          <td class="num">$246,000<div class="track"><span class="bar b-fix" style="width:34.7%"></span></div></td>
+          <td class="num delta up">+$234,000</td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a><br><a href="#C2">Attendance not updated in CRM</a></div></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">Organic</th>
+          <td class="num">$144,000<div class="track"><span class="bar b-rep" style="width:20.3%"></span></div></td>
+          <td class="num">$180,000<div class="track"><span class="bar b-fix" style="width:25.4%"></span></div></td>
+          <td class="num delta up">+$36,000</td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a><br><a href="#C4">Duplicate contacts</a></div></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">Content Syndication</th>
+          <td class="num">$60,000<div class="track"><span class="bar b-rep" style="width:8.5%"></span></div></td>
+          <td class="num">$72,000<div class="track"><span class="bar b-fix" style="width:10.2%"></span></div></td>
+          <td class="num delta up">+$12,000</td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a><br><a href="#C2">Attendance not updated in CRM</a><br><a href="#C4">Duplicate contacts</a></div></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">6sense</th>
+          <td class="num">$108,000<div class="track"><span class="bar b-rep" style="width:15.3%"></span></div></td>
+          <td class="num">$48,000<div class="track"><span class="bar b-fix" style="width:6.8%"></span></div></td>
+          <td class="num delta down">−$60,000</td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a></div></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">Webinars</th>
+          <td class="num">$0<div class="track"><span class="bar b-rep" style="width:0.0%"></span></div></td>
+          <td class="num">$30,000<div class="track"><span class="bar b-fix" style="width:4.2%"></span></div></td>
+          <td class="num delta up">+$30,000</td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C2">Attendance not updated in CRM</a></div></td>
+        </tr>
+        <tr class="">
+          <th scope="row">Email</th>
+          <td class="num">$0<div class="track"><span class="bar b-rep" style="width:0.0%"></span></div></td>
+          <td class="num">$0<div class="track"><span class="bar b-fix" style="width:0.0%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill ok">Trusted</span></td>
+        </tr>
+        <tr class="warn nonchan">
+          <th scope="row">No marketing activity</th>
+          <td class="num">$708,000<div class="track"><span class="bar b-rep" style="width:100.0%"></span></div></td>
+          <td class="num">$456,000<div class="track"><span class="bar b-fix" style="width:64.4%"></span></div></td>
+          <td class="num delta down">−$252,000</td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a><br><a href="#C2">Attendance not updated in CRM</a><br><a href="#C4">Duplicate contacts</a><br><a href="#C5">Deal with no contact</a><br><a href="#C6">Deal amount ≠ billing</a></div></td>
+        </tr>
+        <tr class="warn nonchan">
+          <th scope="row">No source</th>
+          <td class="num">$288,000<div class="track"><span class="bar b-rep" style="width:40.7%"></span></div></td>
+          <td class="num">$186,000<div class="track"><span class="bar b-fix" style="width:26.3%"></span></div></td>
+          <td class="num delta down">−$102,000</td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C3">Form lost ad tracking</a></div></td>
+        </tr>
+        </tbody>
+        <tfoot>
+          <tr class="ms"><th>Marketing-sourced<div class="sub">all channels except No source and No marketing activity</div></th><td class="num">$888,000 <span class="muted">(47%)</span></td><td class="num">$1,242,000 <span class="muted">(66%)</span></td><td class="num delta up">+$354,000</td><td></td></tr>
+          <tr><th>Total</th><td class="num">$1,884,000</td><td class="num">$1,884,000</td><td class="num muted">—</td><td></td></tr>
+        </tfoot>
+      </table>
+      <table class="t-pipeline_created s-expansion">
+        <thead><tr><th>Channel</th><th>Reported today</th><th>If fixes are approved</th><th>Change</th><th>Trust</th></tr></thead>
+        <tbody>
+        <tr class="warn">
+          <th scope="row">LinkedIn</th>
+          <td class="num">$55,200<div class="track"><span class="bar b-rep" style="width:100.0%"></span></div></td>
+          <td class="num">$55,200<div class="track"><span class="bar b-fix" style="width:100.0%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a><br><a href="#C3">Form lost ad tracking</a><br><a href="#C6">Deal amount ≠ billing</a></div></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">Paid Search</th>
+          <td class="num">$51,600<div class="track"><span class="bar b-rep" style="width:93.5%"></span></div></td>
+          <td class="num">$51,600<div class="track"><span class="bar b-fix" style="width:93.5%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C3">Form lost ad tracking</a><br><a href="#C4">Duplicate contacts</a></div></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">Content Syndication</th>
+          <td class="num">$24,000<div class="track"><span class="bar b-rep" style="width:43.5%"></span></div></td>
+          <td class="num">$24,000<div class="track"><span class="bar b-fix" style="width:43.5%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a><br><a href="#C2">Attendance not updated in CRM</a><br><a href="#C4">Duplicate contacts</a></div></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">Organic</th>
+          <td class="num">$18,000<div class="track"><span class="bar b-rep" style="width:32.6%"></span></div></td>
+          <td class="num">$18,000<div class="track"><span class="bar b-fix" style="width:32.6%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a><br><a href="#C4">Duplicate contacts</a></div></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">6sense</th>
+          <td class="num">$15,600<div class="track"><span class="bar b-rep" style="width:28.3%"></span></div></td>
+          <td class="num">$15,600<div class="track"><span class="bar b-fix" style="width:28.3%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a></div></td>
+        </tr>
+        <tr class="">
+          <th scope="row">Email</th>
+          <td class="num">$6,000<div class="track"><span class="bar b-rep" style="width:10.9%"></span></div></td>
+          <td class="num">$6,000<div class="track"><span class="bar b-fix" style="width:10.9%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill ok">Trusted</span></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">Webinars</th>
+          <td class="num">$6,000<div class="track"><span class="bar b-rep" style="width:10.9%"></span></div></td>
+          <td class="num">$6,000<div class="track"><span class="bar b-fix" style="width:10.9%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C2">Attendance not updated in CRM</a></div></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">Events</th>
+          <td class="num">$0<div class="track"><span class="bar b-rep" style="width:0.0%"></span></div></td>
+          <td class="num">$0<div class="track"><span class="bar b-fix" style="width:0.0%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a><br><a href="#C2">Attendance not updated in CRM</a></div></td>
+        </tr>
+        <tr class="warn nonchan">
+          <th scope="row">No marketing activity</th>
+          <td class="num">$24,000<div class="track"><span class="bar b-rep" style="width:43.5%"></span></div></td>
+          <td class="num">$24,000<div class="track"><span class="bar b-fix" style="width:43.5%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a><br><a href="#C2">Attendance not updated in CRM</a><br><a href="#C4">Duplicate contacts</a><br><a href="#C5">Deal with no contact</a><br><a href="#C6">Deal amount ≠ billing</a></div></td>
+        </tr>
+        <tr class="warn nonchan">
+          <th scope="row">No source</th>
+          <td class="num">$0<div class="track"><span class="bar b-rep" style="width:0.0%"></span></div></td>
+          <td class="num">$0<div class="track"><span class="bar b-fix" style="width:0.0%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C3">Form lost ad tracking</a></div></td>
+        </tr>
+        </tbody>
+        <tfoot>
+          <tr class="ms"><th>Marketing-sourced<div class="sub">all channels except No source and No marketing activity</div></th><td class="num">$176,400 <span class="muted">(88%)</span></td><td class="num">$176,400 <span class="muted">(88%)</span></td><td class="num delta "><span class="muted">—</span></td><td></td></tr>
+          <tr><th>Total</th><td class="num">$200,400</td><td class="num">$200,400</td><td class="num muted">—</td><td></td></tr>
+        </tfoot>
+      </table>
+      <table class="t-closed_won_arr s-all">
+        <thead><tr><th>Channel</th><th>Reported today</th><th>If fixes are approved</th><th>Change</th><th>Trust</th></tr></thead>
+        <tbody>
+        <tr class="warn">
+          <th scope="row">LinkedIn</th>
+          <td class="num">$183,600<div class="track"><span class="bar b-rep" style="width:72.9%"></span></div></td>
+          <td class="num">$183,600<div class="track"><span class="bar b-fix" style="width:72.9%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a><br><a href="#C3">Form lost ad tracking</a><br><a href="#C6">Deal amount ≠ billing</a></div></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">Paid Search</th>
+          <td class="num">$84,000<div class="track"><span class="bar b-rep" style="width:33.3%"></span></div></td>
+          <td class="num">$84,000<div class="track"><span class="bar b-fix" style="width:33.3%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C3">Form lost ad tracking</a><br><a href="#C4">Duplicate contacts</a></div></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">Events</th>
+          <td class="num">$60,000<div class="track"><span class="bar b-rep" style="width:23.8%"></span></div></td>
+          <td class="num">$60,000<div class="track"><span class="bar b-fix" style="width:23.8%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a><br><a href="#C2">Attendance not updated in CRM</a></div></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">6sense</th>
+          <td class="num">$54,000<div class="track"><span class="bar b-rep" style="width:21.4%"></span></div></td>
+          <td class="num">$54,000<div class="track"><span class="bar b-fix" style="width:21.4%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a></div></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">Organic</th>
+          <td class="num">$24,000<div class="track"><span class="bar b-rep" style="width:9.5%"></span></div></td>
+          <td class="num">$24,000<div class="track"><span class="bar b-fix" style="width:9.5%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a><br><a href="#C4">Duplicate contacts</a></div></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">Webinars</th>
+          <td class="num">$21,600<div class="track"><span class="bar b-rep" style="width:8.6%"></span></div></td>
+          <td class="num">$21,600<div class="track"><span class="bar b-fix" style="width:8.6%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C2">Attendance not updated in CRM</a></div></td>
+        </tr>
+        <tr class="">
+          <th scope="row">Email</th>
+          <td class="num">$9,600<div class="track"><span class="bar b-rep" style="width:3.8%"></span></div></td>
+          <td class="num">$9,600<div class="track"><span class="bar b-fix" style="width:3.8%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill ok">Trusted</span></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">Content Syndication</th>
+          <td class="num">$0<div class="track"><span class="bar b-rep" style="width:0.0%"></span></div></td>
+          <td class="num">$0<div class="track"><span class="bar b-fix" style="width:0.0%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a><br><a href="#C2">Attendance not updated in CRM</a><br><a href="#C4">Duplicate contacts</a></div></td>
+        </tr>
+        <tr class="warn nonchan">
+          <th scope="row">No marketing activity</th>
+          <td class="num">$252,000<div class="track"><span class="bar b-rep" style="width:100.0%"></span></div></td>
+          <td class="num">$252,000<div class="track"><span class="bar b-fix" style="width:100.0%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a><br><a href="#C2">Attendance not updated in CRM</a><br><a href="#C4">Duplicate contacts</a><br><a href="#C5">Deal with no contact</a><br><a href="#C6">Deal amount ≠ billing</a></div></td>
+        </tr>
+        <tr class="warn nonchan">
+          <th scope="row">No source</th>
+          <td class="num">$0<div class="track"><span class="bar b-rep" style="width:0.0%"></span></div></td>
+          <td class="num">$0<div class="track"><span class="bar b-fix" style="width:0.0%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C3">Form lost ad tracking</a></div></td>
+        </tr>
+        </tbody>
+        <tfoot>
+          <tr class="ms"><th>Marketing-sourced<div class="sub">all channels except No source and No marketing activity</div></th><td class="num">$436,800 <span class="muted">(63%)</span></td><td class="num">$436,800 <span class="muted">(63%)</span></td><td class="num delta "><span class="muted">—</span></td><td></td></tr>
+          <tr><th>Total</th><td class="num">$688,800</td><td class="num">$688,800</td><td class="num muted">—</td><td></td></tr>
+        </tfoot>
+      </table>
+      <table class="t-closed_won_arr s-new_logo">
+        <thead><tr><th>Channel</th><th>Reported today</th><th>If fixes are approved</th><th>Change</th><th>Trust</th></tr></thead>
+        <tbody>
+        <tr class="warn">
+          <th scope="row">LinkedIn</th>
+          <td class="num">$156,000<div class="track"><span class="bar b-rep" style="width:61.9%"></span></div></td>
+          <td class="num">$156,000<div class="track"><span class="bar b-fix" style="width:61.9%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a><br><a href="#C3">Form lost ad tracking</a><br><a href="#C6">Deal amount ≠ billing</a></div></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">Events</th>
+          <td class="num">$60,000<div class="track"><span class="bar b-rep" style="width:23.8%"></span></div></td>
+          <td class="num">$60,000<div class="track"><span class="bar b-fix" style="width:23.8%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a><br><a href="#C2">Attendance not updated in CRM</a></div></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">6sense</th>
+          <td class="num">$48,000<div class="track"><span class="bar b-rep" style="width:19.0%"></span></div></td>
+          <td class="num">$48,000<div class="track"><span class="bar b-fix" style="width:19.0%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a></div></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">Paid Search</th>
+          <td class="num">$48,000<div class="track"><span class="bar b-rep" style="width:19.0%"></span></div></td>
+          <td class="num">$48,000<div class="track"><span class="bar b-fix" style="width:19.0%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C3">Form lost ad tracking</a><br><a href="#C4">Duplicate contacts</a></div></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">Organic</th>
+          <td class="num">$24,000<div class="track"><span class="bar b-rep" style="width:9.5%"></span></div></td>
+          <td class="num">$24,000<div class="track"><span class="bar b-fix" style="width:9.5%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a><br><a href="#C4">Duplicate contacts</a></div></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">Content Syndication</th>
+          <td class="num">$0<div class="track"><span class="bar b-rep" style="width:0.0%"></span></div></td>
+          <td class="num">$0<div class="track"><span class="bar b-fix" style="width:0.0%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a><br><a href="#C2">Attendance not updated in CRM</a><br><a href="#C4">Duplicate contacts</a></div></td>
+        </tr>
+        <tr class="">
+          <th scope="row">Email</th>
+          <td class="num">$0<div class="track"><span class="bar b-rep" style="width:0.0%"></span></div></td>
+          <td class="num">$0<div class="track"><span class="bar b-fix" style="width:0.0%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill ok">Trusted</span></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">Webinars</th>
+          <td class="num">$0<div class="track"><span class="bar b-rep" style="width:0.0%"></span></div></td>
+          <td class="num">$0<div class="track"><span class="bar b-fix" style="width:0.0%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C2">Attendance not updated in CRM</a></div></td>
+        </tr>
+        <tr class="warn nonchan">
+          <th scope="row">No marketing activity</th>
+          <td class="num">$252,000<div class="track"><span class="bar b-rep" style="width:100.0%"></span></div></td>
+          <td class="num">$252,000<div class="track"><span class="bar b-fix" style="width:100.0%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a><br><a href="#C2">Attendance not updated in CRM</a><br><a href="#C4">Duplicate contacts</a><br><a href="#C5">Deal with no contact</a><br><a href="#C6">Deal amount ≠ billing</a></div></td>
+        </tr>
+        <tr class="warn nonchan">
+          <th scope="row">No source</th>
+          <td class="num">$0<div class="track"><span class="bar b-rep" style="width:0.0%"></span></div></td>
+          <td class="num">$0<div class="track"><span class="bar b-fix" style="width:0.0%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C3">Form lost ad tracking</a></div></td>
+        </tr>
+        </tbody>
+        <tfoot>
+          <tr class="ms"><th>Marketing-sourced<div class="sub">all channels except No source and No marketing activity</div></th><td class="num">$336,000 <span class="muted">(57%)</span></td><td class="num">$336,000 <span class="muted">(57%)</span></td><td class="num delta "><span class="muted">—</span></td><td></td></tr>
+          <tr><th>Total</th><td class="num">$588,000</td><td class="num">$588,000</td><td class="num muted">—</td><td></td></tr>
+        </tfoot>
+      </table>
+      <table class="t-closed_won_arr s-expansion">
+        <thead><tr><th>Channel</th><th>Reported today</th><th>If fixes are approved</th><th>Change</th><th>Trust</th></tr></thead>
+        <tbody>
+        <tr class="warn">
+          <th scope="row">Paid Search</th>
+          <td class="num">$36,000<div class="track"><span class="bar b-rep" style="width:100.0%"></span></div></td>
+          <td class="num">$36,000<div class="track"><span class="bar b-fix" style="width:100.0%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C3">Form lost ad tracking</a><br><a href="#C4">Duplicate contacts</a></div></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">LinkedIn</th>
+          <td class="num">$27,600<div class="track"><span class="bar b-rep" style="width:76.7%"></span></div></td>
+          <td class="num">$27,600<div class="track"><span class="bar b-fix" style="width:76.7%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a><br><a href="#C3">Form lost ad tracking</a><br><a href="#C6">Deal amount ≠ billing</a></div></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">Webinars</th>
+          <td class="num">$21,600<div class="track"><span class="bar b-rep" style="width:60.0%"></span></div></td>
+          <td class="num">$21,600<div class="track"><span class="bar b-fix" style="width:60.0%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C2">Attendance not updated in CRM</a></div></td>
+        </tr>
+        <tr class="">
+          <th scope="row">Email</th>
+          <td class="num">$9,600<div class="track"><span class="bar b-rep" style="width:26.7%"></span></div></td>
+          <td class="num">$9,600<div class="track"><span class="bar b-fix" style="width:26.7%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill ok">Trusted</span></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">6sense</th>
+          <td class="num">$6,000<div class="track"><span class="bar b-rep" style="width:16.7%"></span></div></td>
+          <td class="num">$6,000<div class="track"><span class="bar b-fix" style="width:16.7%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a></div></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">Content Syndication</th>
+          <td class="num">$0<div class="track"><span class="bar b-rep" style="width:0.0%"></span></div></td>
+          <td class="num">$0<div class="track"><span class="bar b-fix" style="width:0.0%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a><br><a href="#C2">Attendance not updated in CRM</a><br><a href="#C4">Duplicate contacts</a></div></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">Events</th>
+          <td class="num">$0<div class="track"><span class="bar b-rep" style="width:0.0%"></span></div></td>
+          <td class="num">$0<div class="track"><span class="bar b-fix" style="width:0.0%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a><br><a href="#C2">Attendance not updated in CRM</a></div></td>
+        </tr>
+        <tr class="warn">
+          <th scope="row">Organic</th>
+          <td class="num">$0<div class="track"><span class="bar b-rep" style="width:0.0%"></span></div></td>
+          <td class="num">$0<div class="track"><span class="bar b-fix" style="width:0.0%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a><br><a href="#C4">Duplicate contacts</a></div></td>
+        </tr>
+        <tr class="warn nonchan">
+          <th scope="row">No marketing activity</th>
+          <td class="num">$0<div class="track"><span class="bar b-rep" style="width:0.0%"></span></div></td>
+          <td class="num">$0<div class="track"><span class="bar b-fix" style="width:0.0%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C1">Campaign missing in CRM</a><br><a href="#C2">Attendance not updated in CRM</a><br><a href="#C4">Duplicate contacts</a><br><a href="#C5">Deal with no contact</a><br><a href="#C6">Deal amount ≠ billing</a></div></td>
+        </tr>
+        <tr class="warn nonchan">
+          <th scope="row">No source</th>
+          <td class="num">$0<div class="track"><span class="bar b-rep" style="width:0.0%"></span></div></td>
+          <td class="num">$0<div class="track"><span class="bar b-fix" style="width:0.0%"></span></div></td>
+          <td class="num delta "><span class="muted">—</span></td>
+          <td><span class="pill bad">Not trusted</span><div class="why"><a href="#C3">Form lost ad tracking</a></div></td>
+        </tr>
+        </tbody>
+        <tfoot>
+          <tr class="ms"><th>Marketing-sourced<div class="sub">all channels except No source and No marketing activity</div></th><td class="num">$100,800 <span class="muted">(100%)</span></td><td class="num">$100,800 <span class="muted">(100%)</span></td><td class="num delta "><span class="muted">—</span></td><td></td></tr>
+          <tr><th>Total</th><td class="num">$100,800</td><td class="num">$100,800</td><td class="num muted">—</td><td></td></tr>
+        </tfoot>
+      </table>
+    </div>
+    <p class="note"><strong>Nothing has been changed in any system.</strong> "If fixes are approved" is a preview of the numbers once a person approves the proposed fixes (sync the missing campaigns and statuses, merge duplicates, credit paid clicks by their click ID). The total stays the same, because fixes only move deals between channels; what changes is how much of it is credited to marketing (the Marketing-sourced row). Attribution: last successful marketing activity before the opportunity was created. Won ARR uses the opportunity amount; $12,000 of it is above what billing shows (see <a href="#C6">Deal amount ≠ billing</a>).</p>
+  </section>
+
+  <section>
+    <h2>What moves, and why</h2>
+    <div class="moves">
+      <article class="move">
+        <h3>6sense</h3>
+          <div class="mline"><span class="mlabel">Pipeline created</span> <b>$123,600</b> → <b>$63,600</b> <span class="chip down"><a href="#C1">Campaign missing in CRM</a> −$60,000</span></div>
+        <p>The Customer Summit never reached the CRM. This removes O5225 (Summit Systems, $60,000) from 6sense, because the contact attended the Summit after the 6sense form fill. Pipeline goes from $123,600 to $63,600. Won ARR is unchanged.</p>
+      </article>
+      <article class="move">
+        <h3>Content Syndication</h3>
+          <div class="mline"><span class="mlabel">Pipeline created</span> <b>$84,000</b> → <b>$96,000</b> <span class="chip down"><a href="#C2">Attendance not updated in CRM</a> −$18,000</span> <span class="chip up"><a href="#C4">Duplicate contacts</a> +$60,000</span> <span class="chip down"><a href="#C1">Campaign missing in CRM</a> −$30,000</span></div>
+        <p>Three problems move deals in both directions. The Customer Summit missing in the CRM removes O5262 ($30,000) to Events. Attendance not updated removes O5233 ($18,000) to Webinars. Duplicate contacts add O5254 ($60,000) from No marketing activity. Pipeline goes from $84,000 to $96,000.</p>
+      </article>
+      <article class="move">
+        <h3>Events</h3>
+          <div class="mline"><span class="mlabel">Pipeline created</span> <b>$12,000</b> → <b>$246,000</b> <span class="chip up"><a href="#C2">Attendance not updated in CRM</a> +$24,000</span> <span class="chip up"><a href="#C1">Campaign missing in CRM</a> +$210,000</span></div>
+        <p>The Customer Summit missing in the CRM adds five deals: O5225 ($60,000) from 6sense, O5234 ($60,000) from No marketing activity, O5238 ($36,000) from Organic, O5262 ($30,000) from Content Syndication and O5266 ($24,000) from LinkedIn. Attendance not updated adds O5216 ($36,000) and removes O5252 ($12,000) to Webinars. Pipeline goes from $12,000 to $246,000.</p>
+      </article>
+      <article class="move">
+        <h3>LinkedIn</h3>
+          <div class="mline"><span class="mlabel">Pipeline created</span> <b>$391,200</b> → <b>$415,200</b> <span class="chip up"><a href="#C3">Form lost ad tracking</a> +$48,000</span> <span class="chip down"><a href="#C1">Campaign missing in CRM</a> −$24,000</span></div>
+        <p>The form that lost ad tracking adds O5248 ($48,000) from No source, which has a LinkedIn click ID. The Customer Summit missing in the CRM removes O5266 ($24,000) to Events. Pipeline goes from $391,200 to $415,200. Won ARR is unchanged, but it is also affected by deal amounts that don&#39;t match billing.</p>
+      </article>
+      <article class="move">
+        <h3>No marketing activity</h3>
+          <div class="mline"><span class="mlabel">Pipeline created</span> <b>$732,000</b> → <b>$480,000</b> <span class="chip down"><a href="#C4">Duplicate contacts</a> −$156,000</span> <span class="chip down"><a href="#C2">Attendance not updated in CRM</a> −$36,000</span> <span class="chip down"><a href="#C1">Campaign missing in CRM</a> −$60,000</span></div>
+        <p>Deals leave this channel once their real activity is visible. The Customer Summit missing in the CRM removes O5234 ($60,000) to Events. Attendance not updated removes O5216 ($36,000) to Events. Duplicate contacts remove O5198 ($60,000) and O5227 ($12,000) to Organic, O5239 ($24,000) to Paid Search and O5254 ($60,000) to Content Syndication. Pipeline goes from $732,000 to $480,000. The three deals with no contact stay here.</p>
+      </article>
+      <article class="move">
+        <h3>No source</h3>
+          <div class="mline"><span class="mlabel">Pipeline created</span> <b>$288,000</b> → <b>$186,000</b> <span class="chip down"><a href="#C3">Form lost ad tracking</a> −$102,000</span></div>
+        <p>The form that lost ad tracking put these deals here. Three leave after review because they have a paid click ID: O5205 ($36,000) and O5247 ($18,000) to Paid Search, and O5248 ($48,000) to LinkedIn. Pipeline goes from $288,000 to $186,000. Four deals stay, including three ABM hints that need a person&#39;s check.</p>
+      </article>
+      <article class="move">
+        <h3>Organic</h3>
+          <div class="mline"><span class="mlabel">Pipeline created</span> <b>$162,000</b> → <b>$198,000</b> <span class="chip up"><a href="#C4">Duplicate contacts</a> +$72,000</span> <span class="chip down"><a href="#C1">Campaign missing in CRM</a> −$36,000</span></div>
+        <p>Duplicate contacts add O5198 ($60,000) and O5227 ($12,000) from No marketing activity. The Customer Summit missing in the CRM removes O5238 ($36,000) to Events. Pipeline goes from $162,000 to $198,000.</p>
+      </article>
+      <article class="move">
+        <h3>Paid Search</h3>
+          <div class="mline"><span class="mlabel">Pipeline created</span> <b>$279,600</b> → <b>$357,600</b> <span class="chip up"><a href="#C3">Form lost ad tracking</a> +$54,000</span> <span class="chip up"><a href="#C4">Duplicate contacts</a> +$24,000</span></div>
+        <p>The form that lost ad tracking adds O5205 ($36,000) and O5247 ($18,000) from No source, both with a Google click ID. Duplicate contacts add O5239 ($24,000) from No marketing activity. Pipeline goes from $279,600 to $357,600. Nothing moves out.</p>
+      </article>
+      <article class="move">
+        <h3>Webinars</h3>
+          <div class="mline"><span class="mlabel">Pipeline created</span> <b>$6,000</b> → <b>$36,000</b> <span class="chip up"><a href="#C2">Attendance not updated in CRM</a> +$30,000</span></div>
+        <p>Attendance not updated adds O5233 ($18,000) from Content Syndication and O5252 ($12,000) from Events, because two on-demand viewers show as only registered in the CRM. Pipeline goes from $6,000 to $36,000.</p>
+      </article></div>
+    <details class="opps"><summary>Every opportunity that changes channel (15)</summary>
+      <div class="table-wrap"><table><thead><tr><th>Opportunity</th><th>Account</th><th>Amount</th><th>Channel today → if fixed</th><th>Because of</th></tr></thead><tbody><tr><td><code>O5198</code></td><td>North Analytics — New business</td><td class="num">$60,000</td><td>No marketing activity → <b>Organic</b></td><td><a href="#C4">Duplicate contacts</a></td></tr><tr><td><code>O5205</code></td><td>Cedar Logistics — New business</td><td class="num">$36,000</td><td>No source → <b>Paid Search</b></td><td><a href="#C3">Form lost ad tracking</a></td></tr><tr><td><code>O5216</code></td><td>Silver Media — New business</td><td class="num">$36,000</td><td>No marketing activity → <b>Events</b></td><td><a href="#C2">Attendance not updated in CRM</a></td></tr><tr><td><code>O5225</code></td><td>Summit Systems — New business</td><td class="num">$60,000</td><td>6sense → <b>Events</b></td><td><a href="#C1">Campaign missing in CRM</a></td></tr><tr><td><code>O5227</code></td><td>Lumen Finance — New business</td><td class="num">$12,000</td><td>No marketing activity → <b>Organic</b></td><td><a href="#C4">Duplicate contacts</a></td></tr><tr><td><code>O5233</code></td><td>Orbit Media — New business</td><td class="num">$18,000</td><td>Content Syndication → <b>Webinars</b></td><td><a href="#C2">Attendance not updated in CRM</a></td></tr><tr><td><code>O5234</code></td><td>Bright Cloud — New business</td><td class="num">$60,000</td><td>No marketing activity → <b>Events</b></td><td><a href="#C1">Campaign missing in CRM</a></td></tr><tr><td><code>O5238</code></td><td>Granite Foods — New business</td><td class="num">$36,000</td><td>Organic → <b>Events</b></td><td><a href="#C1">Campaign missing in CRM</a></td></tr><tr><td><code>O5239</code></td><td>Nimbus Energy — New business</td><td class="num">$24,000</td><td>No marketing activity → <b>Paid Search</b></td><td><a href="#C4">Duplicate contacts</a></td></tr><tr><td><code>O5247</code></td><td>North Works — New business</td><td class="num">$18,000</td><td>No source → <b>Paid Search</b></td><td><a href="#C3">Form lost ad tracking</a></td></tr><tr><td><code>O5248</code></td><td>Echo Robotics — New business</td><td class="num">$48,000</td><td>No source → <b>LinkedIn</b></td><td><a href="#C3">Form lost ad tracking</a></td></tr><tr><td><code>O5252</code></td><td>Bright Bio — New business</td><td class="num">$12,000</td><td>Events → <b>Webinars</b></td><td><a href="#C2">Attendance not updated in CRM</a></td></tr><tr><td><code>O5254</code></td><td>Prairie Works — New business</td><td class="num">$60,000</td><td>No marketing activity → <b>Content Syndication</b></td><td><a href="#C4">Duplicate contacts</a></td></tr><tr><td><code>O5262</code></td><td>Orbit Health — New business</td><td class="num">$30,000</td><td>Content Syndication → <b>Events</b></td><td><a href="#C1">Campaign missing in CRM</a></td></tr><tr><td><code>O5266</code></td><td>Orbit Robotics — New business</td><td class="num">$24,000</td><td>LinkedIn → <b>Events</b></td><td><a href="#C1">Campaign missing in CRM</a></td></tr></tbody></table></div>
+    </details>
+  </section>
+
+  <section>
+    <h2>Problems found</h2>
+    
+    <article class="issue" id="C1">
+      <p class="kind">Campaign missing in CRM</p>
+      <header><h3>Customer Summit never reached the CRM</h3><span class="pill review">Needs review</span></header>
+      <dl class="facts"><div><dt>Opportunities</dt><dd>5</dd></div><div><dt>Pipeline</dt><dd>$210,000</dd></div><div><dt>Won ARR</dt><dd>$0</dd></div></dl>
+      <p><strong>What happened.</strong> The Q3 2026 Customer Summit (event on 2026-08-06, 35 members, 29 of them successful) exists in the marketing tool but there is no matching campaign in the CRM. Attendance was therefore never recorded there, and five deals are credited to whatever earlier activity the contact had.</p>
+      <p><strong>Impact.</strong> Five opportunities worth $210,000 of pipeline are in the wrong channel. If fixed, Events rises from $12,000 to $246,000 of pipeline. 6sense loses O5225 ($60,000). Content Syndication loses O5262 ($30,000). LinkedIn loses O5266 ($24,000). Organic loses O5238 ($36,000). No marketing activity loses O5234 ($60,000). Example: O5225 (Summit Systems) is shown as 6sense from a form fill on 2026-07-26, but the contact attended the Summit on 2026-08-06, which is the true last touch.</p>
+      <p class="action"><strong>Recommended action.</strong> Marketing ops should create or link a CRM campaign for the Q3 2026 Customer Summit and sync its 35 members, then re-run the report. Also find out why the event campaign wasn&#39;t created automatically.</p>
+    </article>
+    <article class="issue" id="C2">
+      <p class="kind">Attendance not updated in CRM</p>
+      <header><h3>Attendance not updated in CRM</h3><span class="pill review">Needs review</span></header>
+      <dl class="facts"><div><dt>Opportunities</dt><dd>3</dd></div><div><dt>Pipeline</dt><dd>$66,000</dd></div><div><dt>Won ARR</dt><dd>$0</dd></div></dl>
+      <p><strong>What happened.</strong> Three members show as Attended in the marketing tool but still show Registered in the CRM: one for the Q3 2026 Regional Roadshow and two for Q3 2026 Webinar 2 (on-demand viewers). The status sync for these programs is not passing attendance through.</p>
+      <p><strong>Impact.</strong> Three opportunities worth $66,000 of pipeline are credited to the wrong channel. If fixed, O5216 ($36,000) moves from No marketing activity to Events, and O5252 ($12,000) moves from Events to Webinars. O5233 ($18,000) moves from Content Syndication to Webinars. Webinars goes from $6,000 to $36,000 of pipeline.</p>
+      <p class="action"><strong>Recommended action.</strong> Update the three CRM member statuses to match the marketing tool and check the status mapping for the Roadshow and webinar programs, especially the &#39;Attended On-demand&#39; status.</p>
+    </article>
+    <article class="issue" id="C3">
+      <p class="kind">Form lost ad tracking</p>
+      <header><h3>Form lost ad tracking</h3><span class="pill review">Needs review</span></header>
+      <dl class="facts"><div><dt>Opportunities</dt><dd>7</dd></div><div><dt>Pipeline</dt><dd>$288,000</dd></div><div><dt>Won ARR</dt><dd>$0</dd></div></dl>
+      <p><strong>What happened.</strong> Since 2026-08-14 the contact-sales form has been dropping UTM tags. The share of form fills with unexplained missing tracking rose from 1.3% to 28.2%, and 37 form fills have had no UTM since. 20 of them still carry a paid click ID, 3 look like ABM and 14 are unknown. The click IDs are still captured, so the likely cause is the form or tracking script no longer passing UTM parameters through (for example after a form or page change around that date).</p>
+      <p><strong>Impact.</strong> Seven opportunities worth $288,000 of pipeline sit in No source. Three have a click ID and can be credited after review: O5205 ($36,000) and O5247 ($18,000) to Paid Search, and O5248 ($48,000) to LinkedIn. Four stay in No source: O5230, O5240 and O5246 look like ABM (6sense, 6sense, LinkedIn) but that is only a hint for a person to check, and O5245 ($36,000) is unknown. No source would still hold $186,000 of pipeline after the fix.</p>
+      <p class="action"><strong>Recommended action.</strong> Web ops should check the contact-sales form and tracking script around 2026-08-14 and restore UTM capture. A person should review the three click-ID cases before crediting them, and look at the four unresolved ones by hand. The ABM hints are not to be credited automatically.</p>
+    </article>
+    <article class="issue" id="C4">
+      <p class="kind">Duplicate contacts</p>
+      <header><h3>Duplicate contacts</h3><span class="pill review">Needs review</span></header>
+      <dl class="facts"><div><dt>Opportunities</dt><dd>4</dd></div><div><dt>Pipeline</dt><dd>$156,000</dd></div><div><dt>Won ARR</dt><dd>$0</dd></div></dl>
+      <p><strong>What happened.</strong> Four contacts exist twice, for example hiro.ito@northanalytics.com and hiro.ito+sales@northanalytics.com, or the same address in different capitalisation. The opportunity is attached to the duplicate, which has no marketing activity, while the original holds the history.</p>
+      <p><strong>Impact.</strong> Four opportunities worth $156,000 of pipeline show as No marketing activity when they have a real channel. If fixed, O5198 ($60,000) and O5227 ($12,000) move to Organic. O5239 ($24,000) moves to Paid Search. O5254 ($60,000) moves to Content Syndication.</p>
+      <p class="action"><strong>Recommended action.</strong> Merge each duplicate into the record that holds the marketing activity and move the opportunity contact role to it. Review the sales-created &#39;+sales&#39; addresses at the source so duplicates stop being created.</p>
+    </article>
+    <article class="issue" id="C5">
+      <p class="kind">Deal with no contact</p>
+      <header><h3>Deal with no contact</h3><span class="pill review">Needs review</span></header>
+      <dl class="facts"><div><dt>Opportunities</dt><dd>3</dd></div><div><dt>Pipeline</dt><dd>$90,000</dd></div><div><dt>Won ARR</dt><dd>$0</dd></div></dl>
+      <p><strong>What happened.</strong> Three opportunities have no primary contact: O5212 (Blue Health), O5232 (Harbor Finance) and O5263 (Cedar Analytics). Without a contact there is no marketing history to attribute from.</p>
+      <p><strong>Impact.</strong> $90,000 of pipeline is stuck in No marketing activity: O5212 $12,000, O5232 $18,000 and O5263 $60,000. These don&#39;t move in the fixes preview because the contact is unknown.</p>
+      <p class="action"><strong>Recommended action.</strong> Ask the opportunity owners to add the right contact role. Suggested contacts exist (C1565, C1506, C1586) but have several candidates each and must be confirmed by a person. Consider making a contact role required when an opportunity is created.</p>
+    </article>
+    <article class="issue" id="C6">
+      <p class="kind">Deal amount ≠ billing</p>
+      <header><h3>Deal amount does not match billing</h3><span class="pill review">Needs review</span></header>
+      <dl class="facts"><div><dt>Won deals affected</dt><dd>4</dd></div><div><dt>ARR above billing</dt><dd>$12,000</dd></div></dl>
+      <p><strong>What happened.</strong> Of 24 won deals checked, four have a problem. Three have an opportunity amount above what billing shows: O5098 (Blue Foods) $60,000 against $54,000 billed, O5147 (Prairie Health) $30,000 against $26,400, and O5158 (Blue Media) $60,000 against $57,600. One won deal, O5219 (Summit Foods, $24,000, closed 2026-09-03), has no subscription at all.</p>
+      <p><strong>Impact.</strong> Won ARR in the CRM is overstated by $12,000 on the three mismatched deals, and one won deal of $24,000 may not be live. This affects the won ARR figures for the channels these deals sit in, including LinkedIn and No marketing activity.</p>
+      <p class="action"><strong>Recommended action.</strong> Billing is the truth. Update the three opportunity amounts to the billed ARR (or record the discount), and have finance and sales confirm whether Summit Foods is really live.</p>
+    </article>
+  </section>
+
+  <section>
+    <h2>Needs a person to decide</h2>
+    <p class="note">These opportunities stay where they are in both views, because only a person can resolve them. ABM hints come from ad clicks by the account before the form fill: a suggestion to check, never added to the numbers.</p>
+    <div class="table-wrap"><table><thead><tr><th>Opportunity</th><th>Amount</th><th>Problem</th><th>Clue</th><th>Stays in</th></tr></thead><tbody><tr><td><code>O5230</code></td><td class="num">$30,000</td><td><a href="#C3">Form lost ad tracking</a><br><span class="muted">form fill 2026-08-31</span></td><td><span class="pill review">Hint: 6sense</span> <span class="muted">6 6sense ABA clicks in the 14 days before</span></td><td>No source</td></tr><tr><td><code>O5240</code></td><td class="num">$60,000</td><td><a href="#C3">Form lost ad tracking</a><br><span class="muted">form fill 2026-08-23</span></td><td><span class="pill review">Hint: 6sense</span> <span class="muted">3 6sense ABA clicks in the 14 days before</span></td><td>No source</td></tr><tr><td><code>O5245</code></td><td class="num">$36,000</td><td><a href="#C3">Form lost ad tracking</a><br><span class="muted">form fill 2026-08-28</span></td><td><span class="muted">No clues</span></td><td>No source</td></tr><tr><td><code>O5246</code></td><td class="num">$60,000</td><td><a href="#C3">Form lost ad tracking</a><br><span class="muted">form fill 2026-08-30</span></td><td><span class="pill review">Hint: LinkedIn</span> <span class="muted">6 linkedin_aba ABA clicks in the 14 days before</span></td><td>No source</td></tr><tr><td><code>O5212</code></td><td class="num">$12,000</td><td><a href="#C5">Deal with no contact</a></td><td>Suggested contact: wes.zimmer@bluehealth.com <span class="muted">(2 activities)</span></td><td>No marketing activity</td></tr><tr><td><code>O5232</code></td><td class="num">$18,000</td><td><a href="#C5">Deal with no contact</a></td><td>Suggested contact: arash.fischer@harborfinance.com <span class="muted">(3 activities)</span></td><td>No marketing activity</td></tr><tr><td><code>O5263</code></td><td class="num">$60,000</td><td><a href="#C5">Deal with no contact</a></td><td>Suggested contact: farid.diaz@cedaranalytics.com <span class="muted">(2 activities)</span></td><td>No marketing activity</td></tr></tbody></table></div>
+  </section>
+
+  <section>
+    <h2>Influenced opportunities by program</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Program</th><th>Type</th><th>Creation</th><th>Progression</th><th>Total</th><th>Influenced pipeline</th><th>Spend</th><th>Cost / influenced opp</th></tr></thead>
+      <tbody><tr><th scope="row">Events</th><td><span class="muted">person-based</span></td><td class="num">4</td><td class="num">0</td><td class="num"><b>4</b></td><td class="num">$42,000</td><td class="num">$15,400</td><td class="num">$3,850</td></tr><tr><th scope="row">Webinars</th><td><span class="muted">person-based</span></td><td class="num">3</td><td class="num">3</td><td class="num"><b>6</b></td><td class="num">$228,000</td><td class="num">$8,500</td><td class="num">$1,417</td></tr><tr><th scope="row">Content Syndication</th><td><span class="muted">person-based</span></td><td class="num">8</td><td class="num">8</td><td class="num"><b>16</b></td><td class="num">$579,600</td><td class="num">$18,500</td><td class="num">$1,156</td></tr><tr><th scope="row">Email</th><td><span class="muted">person-based</span></td><td class="num">6</td><td class="num">8</td><td class="num"><b>14</b></td><td class="num">$289,200</td><td class="num">$3,100</td><td class="num">$221</td></tr><tr><th scope="row">LinkedIn ABA</th><td><span class="muted">account-based</span></td><td class="num">29</td><td class="num">19</td><td class="num"><b>41</b></td><td class="num">$1,112,400</td><td class="num">$25,300</td><td class="num">$617</td></tr><tr><th scope="row">6sense ABA</th><td><span class="muted">account-based</span></td><td class="num">28</td><td class="num">22</td><td class="num"><b>41</b></td><td class="num">$1,227,600</td><td class="num">$30,100</td><td class="num">$734</td></tr></tbody></table></div>
+    <p class="note"><b>Creation:</b> engaged in the 90 days before the opportunity was created. <b>Progression:</b> engaged while it was open, and it moved up a stage within 30 days. One opportunity can be influenced by several programs, so rows do not add up. Influence shows interest, not cause, and is never added to marketing-sourced numbers. Account-based programs are measured at the account level from the ad platforms, because those clicks never reach the CRM.</p>
+    <div class="stats two">
+      <div class="stat"><span>LinkedIn ABA</span>
+        <b>65 of 148</b><span>target accounts engaged</span>
+        <p class="small">Opportunity rate: <b>43.1%</b> engaged vs. <b>9.6%</b> not engaged. 27 engaged accounts have no open opportunity yet.</p>
+      </div>
+      <div class="stat"><span>6sense ABA</span>
+        <b>60 of 134</b><span>target accounts engaged</span>
+        <p class="small">Opportunity rate: <b>40%</b> engaged vs. <b>14.9%</b> not engaged. 33 engaged accounts moved buying stage. 25 engaged accounts have no open opportunity yet.</p>
+      </div></div>
+  </section>
+
+  <footer>
+    Generated 2026-10-11 22:50 UTC by an AI agent (claude-sonnet-5-5) from test scenario &quot;everything&quot;.
+    Every dollar amount and count is computed by code. The agent investigates, explains and decides trust, and its findings passed
+    every automatic check (1 submission).
+    Proposed fixes are in <code>fixes/</code>.
+  </footer>
+</main>
+</body>
+</html>

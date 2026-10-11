@@ -1,0 +1,5 @@
+type,opportunity_id,name,subscription_id,opportunity_amount,billed_arr,difference
+amount differs from billing,O5098,Blue Foods — New business,SUB-9059,60000,54000,6000
+amount differs from billing,O5147,Prairie Health — New business,SUB-9085,30000,26400,3600
+amount differs from billing,O5158,Blue Media — New business,SUB-9091,60000,57600,2400
+won with no subscription,O5219,Summit Foods — New business,,24000,,

@@ -1,0 +1,4 @@
+opportunity_id,name,amount,stage,suggested_contact_id,suggested_contact_email,needs_review
+O5212,Blue Health — New business,12000,Closed Lost,C1565,wes.zimmer@bluehealth.com,yes
+O5232,Harbor Finance — New business,18000,Closed Lost,C1506,arash.fischer@harborfinance.com,yes
+O5263,Cedar Analytics — New business,60000,Discovery,C1586,farid.diaz@cedaranalytics.com,yes
