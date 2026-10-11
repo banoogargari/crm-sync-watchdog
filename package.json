@@ -8,9 +8,15 @@
     "node": ">=20"
   },
   "scripts": {
+    "watchdog": "node src/index.js",
     "seed": "node scripts/seed.js",
     "checks": "node scripts/run-checks.js",
+    "eval": "node evals/score.js",
     "test": "node --test"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.132.1",
+    "dotenv": "^18.0.6"
+  }
 }
