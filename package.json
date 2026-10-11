@@ -1,0 +1,13 @@
+{
+  "name": "crm-sync-watchdog",
+  "version": "0.1.0",
+  "description": "An AI agent that reconciles the marketing automation platform, the CRM and billing, finds where marketing attribution breaks, and answers questions about pipeline and revenue.",
+  "type": "module",
+  "private": true,
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "seed": "node scripts/seed.js",
+    "test": "node --test"
+  },
+  "license": "MIT"
+}

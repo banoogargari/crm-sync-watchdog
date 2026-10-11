@@ -1,0 +1,604 @@
+{
+  "scenario": "everything",
+  "description": "All six problems at once.",
+  "report_quarter": {
+    "id": "Q3-2026",
+    "label": "Q3 2026",
+    "start": "2026-07-01",
+    "end": "2026-09-30"
+  },
+  "problems": [
+    "C1",
+    "C2",
+    "C3",
+    "C4",
+    "C5",
+    "C6"
+  ],
+  "C1": {
+    "campaign_id": "MC900",
+    "campaign_name": "Q3 2026 Customer Summit",
+    "members": 35,
+    "opportunity_ids": [
+      "O5268",
+      "O5253",
+      "O5197",
+      "O5229",
+      "O5200"
+    ],
+    "pipeline_created": 132000,
+    "closed_won_arr": 0
+  },
+  "C2": {
+    "members": [
+      {
+        "activity_id": 391,
+        "opportunity_id": "O5211",
+        "map_status": "Attended",
+        "crm_status": "Registered"
+      },
+      {
+        "activity_id": 493,
+        "opportunity_id": "O5267",
+        "map_status": "Attended",
+        "crm_status": "Registered"
+      },
+      {
+        "activity_id": 455,
+        "opportunity_id": "O5247",
+        "map_status": "Attended On-demand",
+        "crm_status": "Registered"
+      },
+      {
+        "activity_id": 419,
+        "opportunity_id": "O5228",
+        "map_status": "Attended On-demand",
+        "crm_status": "Registered"
+      }
+    ],
+    "opportunity_ids": [
+      "O5211",
+      "O5267",
+      "O5247",
+      "O5228"
+    ],
+    "pipeline_created": 126000,
+    "closed_won_arr": 60000
+  },
+  "C3": {
+    "start_date": "2026-08-19",
+    "form_fills_that_lost_utm": 26,
+    "cases": [
+      {
+        "opportunity_id": "O5235",
+        "form_fill_date": "2026-08-24",
+        "group": "dropped_paid_click",
+        "true_channel": "Paid Search",
+        "abm_hint": null,
+        "hint_correct": null
+      },
+      {
+        "opportunity_id": "O5265",
+        "form_fill_date": "2026-09-06",
+        "group": "dropped_paid_click",
+        "true_channel": "LinkedIn",
+        "abm_hint": null,
+        "hint_correct": null
+      },
+      {
+        "opportunity_id": "O5198",
+        "form_fill_date": "2026-09-26",
+        "group": "dropped_paid_click",
+        "true_channel": "Paid Search",
+        "abm_hint": null,
+        "hint_correct": null
+      },
+      {
+        "opportunity_id": "O5213",
+        "form_fill_date": "2026-08-22",
+        "group": "likely_abm",
+        "true_channel": "6sense",
+        "abm_hint": "6sense",
+        "hint_correct": true
+      },
+      {
+        "opportunity_id": "O5241",
+        "form_fill_date": "2026-08-30",
+        "group": "likely_abm",
+        "true_channel": "6sense",
+        "abm_hint": "6sense",
+        "hint_correct": true
+      },
+      {
+        "opportunity_id": "O5250",
+        "form_fill_date": "2026-08-27",
+        "group": "likely_abm",
+        "true_channel": "6sense",
+        "abm_hint": "LinkedIn",
+        "hint_correct": false
+      },
+      {
+        "opportunity_id": "O5234",
+        "form_fill_date": "2026-08-19",
+        "group": "unknown",
+        "true_channel": "6sense",
+        "abm_hint": null,
+        "hint_correct": null
+      }
+    ],
+    "opportunity_ids": [
+      "O5235",
+      "O5265",
+      "O5198",
+      "O5213",
+      "O5241",
+      "O5250",
+      "O5234"
+    ],
+    "pipeline_created": 312000,
+    "closed_won_arr": 0
+  },
+  "C4": {
+    "pairs": [
+      {
+        "keep": "C1191",
+        "duplicate": "C9001",
+        "opportunity_id": "O5255",
+        "channel": "Organic"
+      },
+      {
+        "keep": "C1181",
+        "duplicate": "C9002",
+        "opportunity_id": "O5245",
+        "channel": "6sense"
+      },
+      {
+        "keep": "C1150",
+        "duplicate": "C9003",
+        "opportunity_id": "O5199",
+        "channel": "Organic"
+      },
+      {
+        "keep": "C1190",
+        "duplicate": "C9004",
+        "opportunity_id": "O5254",
+        "channel": "LinkedIn"
+      }
+    ],
+    "opportunity_ids": [
+      "O5255",
+      "O5245",
+      "O5199",
+      "O5254"
+    ],
+    "pipeline_created": 162000,
+    "closed_won_arr": 48000
+  },
+  "C5": {
+    "opportunities": [
+      {
+        "opportunity_id": "O5264",
+        "true_contact_id": "C1199"
+      },
+      {
+        "opportunity_id": "O5258",
+        "true_contact_id": "C1194"
+      },
+      {
+        "opportunity_id": "O5243",
+        "true_contact_id": "C1180"
+      }
+    ],
+    "opportunity_ids": [
+      "O5264",
+      "O5258",
+      "O5243"
+    ],
+    "pipeline_created": 120000,
+    "closed_won_arr": 0
+  },
+  "C6": {
+    "mismatches": [
+      {
+        "opportunity_id": "O5172",
+        "opportunity_amount": 24000,
+        "billed_arr": 20400,
+        "difference": 3600
+      },
+      {
+        "opportunity_id": "O5261",
+        "opportunity_amount": 12000,
+        "billed_arr": 8400,
+        "difference": 3600
+      },
+      {
+        "opportunity_id": "O5144",
+        "opportunity_amount": 24000,
+        "billed_arr": 18000,
+        "difference": 6000
+      }
+    ],
+    "won_without_subscription": [
+      "O5263"
+    ],
+    "overstated_arr": 13200,
+    "opportunity_ids": [
+      "O5172",
+      "O5261",
+      "O5144",
+      "O5263"
+    ]
+  },
+  "report": {
+    "quarter": "Q3-2026",
+    "pipeline_created": {
+      "reported": {
+        "6sense|expansion": 15600,
+        "6sense|new_logo": 60000,
+        "Content Syndication|expansion": 24000,
+        "Content Syndication|new_logo": 138000,
+        "Email|expansion": 15600,
+        "Email|new_logo": 96000,
+        "Events|new_logo": 12000,
+        "LinkedIn|expansion": 21600,
+        "LinkedIn|new_logo": 354000,
+        "No marketing activity|new_logo": 756000,
+        "No source|new_logo": 312000,
+        "Organic|expansion": 21600,
+        "Organic|new_logo": 102000,
+        "Paid Search|expansion": 42000,
+        "Paid Search|new_logo": 84000,
+        "Webinars|expansion": 24000
+      },
+      "if_fixes_approved": {
+        "6sense|expansion": 15600,
+        "6sense|new_logo": 108000,
+        "Content Syndication|expansion": 24000,
+        "Content Syndication|new_logo": 102000,
+        "Email|expansion": 15600,
+        "Email|new_logo": 96000,
+        "Events|new_logo": 228000,
+        "LinkedIn|expansion": 21600,
+        "LinkedIn|new_logo": 426000,
+        "No marketing activity|new_logo": 384000,
+        "No source|new_logo": 192000,
+        "Organic|expansion": 21600,
+        "Organic|new_logo": 156000,
+        "Paid Search|expansion": 42000,
+        "Paid Search|new_logo": 192000,
+        "Webinars|expansion": 24000,
+        "Webinars|new_logo": 30000
+      }
+    },
+    "closed_won_arr": {
+      "reported": {
+        "6sense|new_logo": 48000,
+        "Email|expansion": 9600,
+        "Email|new_logo": 72000,
+        "Events|expansion": 18000,
+        "Events|new_logo": 60000,
+        "LinkedIn|expansion": 18000,
+        "LinkedIn|new_logo": 192000,
+        "No marketing activity|new_logo": 216000,
+        "Organic|expansion": 12000,
+        "Organic|new_logo": 48000,
+        "Paid Search|expansion": 24000,
+        "Paid Search|new_logo": 96000,
+        "Webinars|expansion": 6000,
+        "Webinars|new_logo": 24000
+      },
+      "if_fixes_approved": {
+        "6sense|new_logo": 96000,
+        "Email|expansion": 9600,
+        "Email|new_logo": 72000,
+        "Events|expansion": 18000,
+        "Events|new_logo": 120000,
+        "LinkedIn|expansion": 18000,
+        "LinkedIn|new_logo": 192000,
+        "No marketing activity|new_logo": 108000,
+        "Organic|expansion": 12000,
+        "Organic|new_logo": 48000,
+        "Paid Search|expansion": 24000,
+        "Paid Search|new_logo": 96000,
+        "Webinars|expansion": 6000,
+        "Webinars|new_logo": 24000
+      }
+    },
+    "totals": {
+      "pipeline_created": 2078400,
+      "closed_won_arr": 843600
+    }
+  },
+  "influence": {
+    "quarter": "Q3-2026",
+    "programs": {
+      "Events": {
+        "creation": [
+          "O5217",
+          "O5247",
+          "O5260"
+        ],
+        "progression": [
+          "O5167",
+          "O5186"
+        ],
+        "total": [
+          "O5167",
+          "O5186",
+          "O5217",
+          "O5247",
+          "O5260"
+        ],
+        "pipeline": 138000
+      },
+      "Webinars": {
+        "creation": [
+          "O5232",
+          "O5244"
+        ],
+        "progression": [
+          "O5176",
+          "O5193",
+          "O5224"
+        ],
+        "total": [
+          "O5176",
+          "O5193",
+          "O5224",
+          "O5232",
+          "O5244"
+        ],
+        "pipeline": 114000
+      },
+      "Content Syndication": {
+        "creation": [
+          "O5200",
+          "O5221",
+          "O5227",
+          "O5228",
+          "O5241",
+          "O5249",
+          "O5252",
+          "O5257",
+          "O5265"
+        ],
+        "progression": [
+          "O5152",
+          "O5162",
+          "O5210",
+          "O5213",
+          "O5220",
+          "O5223",
+          "O5242",
+          "O5244",
+          "O5257",
+          "O5267"
+        ],
+        "total": [
+          "O5152",
+          "O5162",
+          "O5200",
+          "O5210",
+          "O5213",
+          "O5220",
+          "O5221",
+          "O5223",
+          "O5227",
+          "O5228",
+          "O5241",
+          "O5242",
+          "O5244",
+          "O5249",
+          "O5252",
+          "O5257",
+          "O5265",
+          "O5267"
+        ],
+        "pipeline": 579600
+      },
+      "Email": {
+        "creation": [
+          "O5207",
+          "O5208",
+          "O5234",
+          "O5240",
+          "O5260",
+          "O5262"
+        ],
+        "progression": [
+          "O5150",
+          "O5166",
+          "O5172",
+          "O5178",
+          "O5189",
+          "O5214",
+          "O5230",
+          "O5253"
+        ],
+        "total": [
+          "O5150",
+          "O5166",
+          "O5172",
+          "O5178",
+          "O5189",
+          "O5207",
+          "O5208",
+          "O5214",
+          "O5230",
+          "O5234",
+          "O5240",
+          "O5253",
+          "O5260",
+          "O5262"
+        ],
+        "pipeline": 301200
+      },
+      "LinkedIn ABA": {
+        "creation": [
+          "O5198",
+          "O5202",
+          "O5204",
+          "O5207",
+          "O5211",
+          "O5213",
+          "O5215",
+          "O5220",
+          "O5224",
+          "O5226",
+          "O5229",
+          "O5231",
+          "O5233",
+          "O5234",
+          "O5236",
+          "O5243",
+          "O5250",
+          "O5251",
+          "O5252",
+          "O5253",
+          "O5254",
+          "O5255",
+          "O5258",
+          "O5261",
+          "O5267"
+        ],
+        "progression": [
+          "O5142",
+          "O5150",
+          "O5156",
+          "O5162",
+          "O5164",
+          "O5195",
+          "O5215",
+          "O5224",
+          "O5226",
+          "O5229",
+          "O5261"
+        ],
+        "total": [
+          "O5142",
+          "O5150",
+          "O5156",
+          "O5162",
+          "O5164",
+          "O5195",
+          "O5198",
+          "O5202",
+          "O5204",
+          "O5207",
+          "O5211",
+          "O5213",
+          "O5215",
+          "O5220",
+          "O5224",
+          "O5226",
+          "O5229",
+          "O5231",
+          "O5233",
+          "O5234",
+          "O5236",
+          "O5243",
+          "O5250",
+          "O5251",
+          "O5252",
+          "O5253",
+          "O5254",
+          "O5255",
+          "O5258",
+          "O5261",
+          "O5267"
+        ],
+        "pipeline": 1044000
+      },
+      "6sense ABA": {
+        "creation": [
+          "O5203",
+          "O5207",
+          "O5208",
+          "O5212",
+          "O5213",
+          "O5220",
+          "O5224",
+          "O5225",
+          "O5232",
+          "O5235",
+          "O5238",
+          "O5240",
+          "O5241",
+          "O5242",
+          "O5243",
+          "O5246",
+          "O5247",
+          "O5250",
+          "O5251",
+          "O5252",
+          "O5253",
+          "O5254",
+          "O5255",
+          "O5258",
+          "O5259",
+          "O5267"
+        ],
+        "progression": [
+          "O5111",
+          "O5149",
+          "O5160",
+          "O5162",
+          "O5170",
+          "O5176",
+          "O5181",
+          "O5189",
+          "O5203",
+          "O5213",
+          "O5224",
+          "O5225",
+          "O5246",
+          "O5250",
+          "O5253",
+          "O5255",
+          "O5259",
+          "O5264",
+          "O5266"
+        ],
+        "total": [
+          "O5111",
+          "O5149",
+          "O5160",
+          "O5162",
+          "O5170",
+          "O5176",
+          "O5181",
+          "O5189",
+          "O5203",
+          "O5207",
+          "O5208",
+          "O5212",
+          "O5213",
+          "O5220",
+          "O5224",
+          "O5225",
+          "O5232",
+          "O5235",
+          "O5238",
+          "O5240",
+          "O5241",
+          "O5242",
+          "O5243",
+          "O5246",
+          "O5247",
+          "O5250",
+          "O5251",
+          "O5252",
+          "O5253",
+          "O5254",
+          "O5255",
+          "O5258",
+          "O5259",
+          "O5264",
+          "O5266",
+          "O5267"
+        ],
+        "pipeline": 1218000
+      }
+    }
+  }
+}
