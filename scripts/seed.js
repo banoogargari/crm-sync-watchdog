@@ -135,6 +135,14 @@ function buildBase() {
   };
   const addActivity = (contact, campaign, date, { success = true, channel } = {}) => {
     const t = CAMPAIGN_TYPES[campaign.type];
+    // A person is a member of a program only once (form fills can repeat).
+    if (campaign.type !== 'web_form') {
+      const existing = activities.find((x) => x.contact_id === contact.id && x.map_campaign_id === campaign.id);
+      if (existing) {
+        if (success && !existing.is_success) { existing.status = existing.crm_status = rng.pick(t.success); existing.is_success = existing.crm_is_success = true; }
+        return existing;
+      }
+    }
     const status = success ? rng.pick(t.success) : rng.pick(t.other.length ? t.other : t.success);
     const a = { id: ++actId, map_campaign_id: campaign.id, contact_id: contact.id, email: contact.email, date, status, is_success: success, crm_status: status, crm_is_success: success };
     if (campaign.type === 'web_form') Object.assign(a, formFields(channel));
@@ -617,7 +625,7 @@ const C3_CASES = [
 ];
 const ALL = {
   unsynced: { date: '2026-08-06', opps: 5, attendees: 30 },
-  status: { opps: 4 },
+  status: { opps: 3 },
   utm: { startDate: '2026-08-14', rate: 0.4, cases: C3_CASES },
   duplicates: { opps: 4 },
   noContact: { opps: 3 },

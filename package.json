@@ -4,9 +4,12 @@
   "description": "An AI agent that reconciles the marketing automation platform, the CRM and billing, finds where marketing attribution breaks, and answers questions about pipeline and revenue.",
   "type": "module",
   "private": true,
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "seed": "node scripts/seed.js",
+    "checks": "node scripts/run-checks.js",
     "test": "node --test"
   },
   "license": "MIT"
