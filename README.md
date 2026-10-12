@@ -28,7 +28,8 @@ What I want this agent to be:
 - [x] Attribution (as reported / if fixes are approved), the six checks and influence by program, checked against the answer keys
 - [x] Agent (Claude investigates through 8 tools), verifier and report (HTML + Markdown + fix files)
 - [x] Eval with the real model: 18 of 18 problems found, 0 false alarms, 0 broken channels shown as trusted
-- [ ] Phase 2: chat
+- [x] Phase 2a: chat in the terminal, with an answer checker and a graded question set
+- [ ] Phase 2b: chat on a web page, online with an access code and a spending limit
 
 ## Results
 
@@ -51,15 +52,32 @@ No-UTM form fills sorted into the right group: **16/16 (100%)** · ABM hint accu
 
 Model `claude-sonnet-5-5`, 1 run per scenario, 2026-10-11. Every success criterion in the [spec](SPEC.md#success-criteria-phase-1) is met. In the `subtle` scenario (small versions of all six problems) the verifier rejected the first submission and the agent corrected it, which is the verifier doing its job. The data is synthetic: a real Marketo + Salesforce + billing export will have problems these scenarios don't cover.
 
+### The chat
+
+9 questions a CMO would ask, graded against answers computed from the data (`npm run eval:chat`): **9/9 passed**, all on the checker's first try, $0.13 for all nine (`claude-sonnet-5-5`). Full table and answers: [evals/chat-results.md](evals/chat-results.md).
+
+The question that matters most:
+
+> **You:** Events pipeline dropped a lot from Q2 to Q3. Did events stop working?
+>
+> **Claude:** Probably not. Events-sourced pipeline shows $12,000 in Q3 2026, down from $126,000 in Q2 2026 (-90.5%). That drop looks like a data problem, not a market change. The Q3 2026 Customer Summit never reached the CRM, and some event attendance was still marked "Registered", so those deals aren't credited to Events. If the fixes are approved, Events pipeline in Q3 2026 would be $246,000, up 95.2% from Q2 2026.
+>
+> ⚠️ *Events, Q3 2026: likely understated: the Customer Summit never reached the CRM, and attendance was not updated in the CRM. $246,000 if fixes are approved.*
+
+A dashboard would say events fell 90%. The chat says events had their best quarter and the data needs fixing.
+
 ## Run it
 
 ```bash
 npm install                                        # once
-npm test                                           # 75 tests: every number against the answer keys (no API key needed)
+npm test                                           # every number against the answer keys (no API key needed)
 npm run checks -- everything                       # what the checks find in one scenario (no AI)
 npm run watchdog -- --scenario everything --sim    # the full pipeline with a scripted stand-in for Claude (free)
 npm run watchdog -- --scenario everything          # the real agent (needs ANTHROPIC_API_KEY in .env, about $0.10-0.30)
 npm run eval                                       # the agent on all 9 scenarios, graded against the answer keys
+npm run chat                                       # ask questions about the data in plain words (real Claude)
+npm run chat -- --sim                              # the chat with a scripted stand-in (free)
+npm run eval:chat                                  # grade the chat on questions with known answers
 npm run seed                                       # regenerate the test scenarios in evals/scenarios/
 ```
 
@@ -70,7 +88,8 @@ The report is written to `reports/<scenario>-<date>/report.html`, with proposed 
 1. **Code computes every number.** It loads the exports (marketing tool, CRM, billing, ad platforms), runs the six checks, and builds pipeline and ARR by channel twice: as reported today, and if the proposed fixes are approved. It also records which problem moves which opportunity to which channel.
 2. **Claude investigates and explains.** Through 8 read-only tools it looks at each problem (which campaign, since when, example opportunities, the activity history behind a channel), then writes the headline, one explanation per problem, why each channel changes, and which channels can be trusted.
 3. **A verifier checks Claude before anything is published:** every problem covered (V1); no affected channel shown as trusted (V2); every channel that changes is explained by exactly the problems that move it (V3); every number in the text came from a tool (V4); no text uses the internal codes C1…C6, so a CMO can read it (V5); the headline is at most 3 sentences and 60 words (V6). If a rule fails, Claude gets the reasons and tries again.
-4. **Nothing is changed in any system.** Fixes are proposals in CSV files for a person to approve.
+4. **The chat uses the same idea.** Claude answers questions ("Was Q3 better than Q2?") only through metric tools that compute every number, including the changes between quarters. Before an answer is shown, a checker makes sure every number came from a tool, and that every channel it mentions that a data problem affects carries a warning, e.g. *"Events pipeline is likely understated: the Customer Summit never reached the CRM."*
+5. **Nothing is changed in any system.** Fixes are proposals in CSV files for a person to approve.
 
 Scenarios: `clean`, `unsynced-campaign`, `status-not-synced`, `utm-dropped`, `duplicates`, `no-contact-role`, `amount-mismatch`, `everything`, `subtle`.
 

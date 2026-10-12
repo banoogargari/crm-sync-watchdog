@@ -12,7 +12,9 @@
     "seed": "node scripts/seed.js",
     "checks": "node scripts/run-checks.js",
     "eval": "node evals/score.js",
-    "test": "node --test"
+    "test": "node --test",
+    "chat": "node scripts/chat.js",
+    "eval:chat": "node evals/chat-score.js"
   },
   "license": "MIT",
   "dependencies": {
