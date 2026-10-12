@@ -87,3 +87,11 @@ test('marketing-sourced pipeline: total unchanged, marketing share goes up when 
   assert.equal(ms.reported.pipeline_created.share_pct, 51.1);
   assert.equal(ms.if_fixes_approved.pipeline_created.share_pct, 68);
 });
+
+test('a headline longer than 3 sentences is rejected', () => {
+  const { data, quarter } = load('clean');
+  const results = analyze(data, quarter);
+  const findings = { headline: 'One. Two. Three. Four.', issues: [], channel_explanations: [], channel_trust: Object.keys(results.totals.reported).map((channel) => ({ channel, trusted: true, reason: 'no open issues' })) };
+  const v = verifyFindings({ findings, ...results, seenNumbers: new Set() });
+  assert.deepEqual(v.errors.map((e) => e.rule), ['V6']);
+});

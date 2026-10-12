@@ -42,6 +42,10 @@ Rules you must follow:
   (e.g. "attendance not updated adds O5216 and removes O5252") rather than attributing the net change to one opportunity.
 - Fixes never change total pipeline or total won ARR; they move money between channels. What changes is the
   marketing-sourced amount and share (run_checks.marketing_sourced). Lead the headline with it when it changes.
+- The headline is what the CMO reads first, and often the only thing: at most 3 sentences and 60 words. Lead with
+  marketing-sourced pipeline (today vs. if fixes are approved), say whether the channel numbers can be trusted, and
+  name the one or two biggest problems. Leave influence and caveats to the rest of the report.
+- Write dates the way people say them: "Aug 14", not "2026-08-14".
 - Write for a CMO and a marketing operations lead: short, concrete, no jargon. Name the channel, the number and the action.
 - Write money with a dollar sign and thousands separators, e.g. $246,000 (tools return 246000). Write percentages
   exactly as the tools give them.`;

@@ -14,6 +14,7 @@ import { CODE_PATTERN } from './problems.js';
 //       self-calculated numbers).
 //   V5  No text uses the codes C1…C6: the report is read by a CMO, so problems
 //       are named in plain words.
+//   V6  The headline is short enough to be read: at most 3 sentences and 60 words.
 
 const MONTHS = 'Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?';
 const DATE_PATTERNS = [
@@ -90,6 +91,12 @@ export function verifyFindings({ findings, checks, totals, affected, changed, se
     const m = (text ?? '').match(CODE_PATTERN);
     if (m) errors.push({ rule: 'V5', message: `${where}: uses the code "${m[0]}". The CMO does not know the codes; use the problem's plain name instead.` });
   }
+
+  // V6 — a headline a CMO will actually read
+  const h = (findings.headline ?? '').trim();
+  const words = h.split(/\s+/).filter(Boolean).length;
+  const sentences = h.split(/(?<=[.!?])\s+(?=[A-Z"$(])/).filter(Boolean).length;
+  if (words > 60 || sentences > 3) errors.push({ rule: 'V6', message: `The headline has ${sentences} sentences and ${words} words; keep it to at most 3 sentences and 60 words. Move the rest into the issues.` });
 
   return { passed: errors.length === 0, errors };
 }

@@ -86,7 +86,7 @@ export const TOOL_DEFINITIONS = [
     input_schema: {
       type: 'object',
       properties: {
-        headline: { type: 'string', description: 'Two or three sentences for the CMO: can pipeline and ARR by channel be trusted this quarter, and what matters most.' },
+        headline: { type: 'string', description: 'At most 3 sentences and 60 words for the CMO: the marketing-sourced pipeline today vs. if fixes are approved, whether the channel numbers can be trusted, and the one or two problems that matter most.' },
         issues: {
           type: 'array',
           items: {
